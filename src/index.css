@@ -1,0 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Squada+One&display=swap');
+@import "tailwindcss";
+
+
+
+@theme {
+  --font-squad:"Squada One", serif;
+
+}
