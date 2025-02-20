@@ -5,12 +5,11 @@ import Login from './components/login'
 import HomePage from './pages/home'
 import Home from './components/home'
 import ViewDetail from './components/viewDetail'
-
 function App() {
 
   return (
    <>
-   <BrowserRouter>
+ <BrowserRouter>
    <Routes>
     <Route path='/login' element={<Login></Login>}></Route>
     <Route path='/' element={<HomePage></HomePage>}>
@@ -19,6 +18,7 @@ function App() {
     </Route>
    </Routes>
    </BrowserRouter>
+ 
    </>
   )
 }

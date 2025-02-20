@@ -4,8 +4,6 @@ import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css";
 import L from "leaflet";
-import { FaCaretLeft } from "react-icons/fa";
-import { FaCaretRight } from "react-icons/fa";
 import "leaflet-defaulticon-compatibility";
 import { useAppContext } from "../context/homeContext";
 import vector from "../assets/Vector.png";
@@ -13,6 +11,7 @@ import group from '../assets/Group.png'
 import group1 from '../assets/Group1.png'
 import loc from '../assets/mdi_map-marker-distance.png'
 import Group3 from '../assets/Group3.png'
+import { useEffect } from "react";
 
 
 function ViewDetail() {
@@ -29,9 +28,11 @@ function ViewDetail() {
           coordinates: [-0.09, 51.505],
         },
       },
-      // ... more features
+     
     ],
   };
+
+  
   return (
     <>
       <div className="w-[100%] h-auto  flex flex-col mt-5 space-y-2 justify-start items-center">
