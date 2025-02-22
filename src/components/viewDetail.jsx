@@ -1,5 +1,5 @@
 import { FaArrowLeft } from "react-icons/fa6";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css";
@@ -11,12 +11,45 @@ import group from '../assets/Group.png'
 import group1 from '../assets/Group1.png'
 import loc from '../assets/mdi_map-marker-distance.png'
 import Group3 from '../assets/Group3.png'
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { fetchTripDataWithrequiredData } from "../service/user.jsx";
+import { current } from "@reduxjs/toolkit";
 
 
 function ViewDetail() {
   const navigate = useNavigate();
-  const { trips } = useAppContext();
+  const [selectedTripId, setSelectedTripId] = useState(null);
+
+  const { trips ,setTripCaluclations ,tripCalculations={},selectedTrips,setSelectedTrips} = useAppContext();
+  useEffect(() => {
+    if (!selectedTrips.length) {
+      navigate(-1)
+      return
+    }
+   
+    setSelectedTripId(   selectedTrips[0]._id
+    )    
+    return ()=>{
+      localStorage.removeItem("selectedTrips")
+    }
+  }, []);
+
+
+  useEffect(() => {
+    if (selectedTripId) {
+      fetchTripDataWithrequiredData(selectedTripId)
+        .then((response) => {
+          setTripCaluclations(response.data);
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    }
+  }, [selectedTripId]);
+  
+
+
+
   const geojsonData = {
     type: "FeatureCollection",
     features: [
@@ -31,6 +64,7 @@ function ViewDetail() {
      
     ],
   };
+console.log(tripCalculations);
 
   
   return (
@@ -85,16 +119,18 @@ function ViewDetail() {
           <div className="w-[3%] h-[30px] border-2 border-gray-300  text-center rounded-sm  flex justify-center items-center mb-1">
             <h1 className="text-xl text-gray-500 font-medium">{"<"}</h1>
           </div>
-          <div className="w-[50%] flex h-full space-x-4 items-end">
-            {trips.map((data, index) => (
+          <div className="w-[50%] flex h-full space-x-4 items-end cursor-pointer" >
+            {selectedTrips.map((data, index) => (
               <h1
                 className={`text-sm    font-medium mb-0 ${
-                  index === 2
+                  data._id === selectedTripId
                     ? "border-b-2 border-blue-600 text-blue-500"
                     : " text-gray-400 "
-                }`}
+                }`}  onClick={() => setSelectedTripId(data._id)}
+
               >
-                {data}
+                {data.tripName
+                }
               </h1>
             ))}
           </div>
@@ -110,7 +146,7 @@ function ViewDetail() {
               <img src={vector} alt="" className="pl-6 pt-3" />
             </div>
             <div className="w-[100%] h-[70px] ">
-              <h1 className="text-2xl font-semibold text-center">63 KM</h1>
+              <h1 className="text-2xl font-semibold text-center">{(tripCalculations.distance/1000).toFixed(2) }Km</h1>
               <h1 className="text-lg text-center">
                 Total Distanced Travelled 
               </h1>
@@ -121,7 +157,7 @@ function ViewDetail() {
               <img src={group} alt="" className="pl-6 pt-3" />
             </div>
             <div className="w-[100%] h-[70px] ">
-              <h1 className="text-2xl font-semibold text-center">1Hr 36 Mins</h1>
+              <h1 className="text-2xl font-semibold text-center">{tripCalculations.travelDuration}</h1>
               <h1 className="text-lg text-center">
               Total Travelled Duration               
               </h1>
@@ -132,7 +168,7 @@ function ViewDetail() {
               <img src={group1} alt="" className="pl-6 pt-3" />
             </div>
             <div className="w-[100%] h-[70px] ">
-              <h1 className="text-2xl font-semibold text-center">41 Mins</h1>
+              <h1 className="text-2xl font-semibold text-center">{tripCalculations.overSpeedDuration}</h1>
               <h1 className="text-lg text-center">
               Over Speeding Duration 
               </h1>
@@ -143,7 +179,7 @@ function ViewDetail() {
               <img src={loc} alt="" className="pl-6 pt-3" />
             </div>
             <div className="w-[100%] h-[70px] ">
-              <h1 className="text-2xl font-semibold text-center">20.3 KM</h1>
+              <h1 className="text-2xl font-semibold text-center">{(tripCalculations.overSpeedingDistance/1000).toFixed(2)}KM</h1>
               <h1 className="text-lg text-center">
               Over Speeding Distance 
               </h1>
@@ -154,7 +190,7 @@ function ViewDetail() {
               <img src={Group3} alt="" className="pl-6 pt-3" />
             </div>
             <div className="w-[100%] h-[70px] ">
-              <h1 className="text-2xl font-semibold text-center">41 Mins</h1>
+              <h1 className="text-2xl font-semibold text-center">{tripCalculations.stoppedDuration}</h1>
               <h1 className="text-lg text-center">
               Stopped Duration              
                </h1>
