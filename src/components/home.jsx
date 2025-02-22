@@ -6,10 +6,13 @@ import { FaCaretLeft } from "react-icons/fa";
 import { FaCaretRight } from "react-icons/fa";
 import { toast } from "sonner";
 import { useEffect } from "react";
+import { deleteTripsApi } from "../service/user.jsx";
+import { useSelector } from "react-redux";
 
 
 function Home() {
-  const { trips, setUpload, setSelectedTrips, selectedTrips, setTripCaluclations } = useAppContext()
+  const {userInfo} = useSelector((state)=>state.user)
+  const { trips, setUpload,setTrips, setSelectedTrips, selectedTrips, setTripCaluclations } = useAppContext()
   const navigate = useNavigate()
   useEffect(() => {
     const storedTrips = JSON.parse(localStorage.getItem("selectedTrips"));
@@ -24,7 +27,7 @@ function Home() {
 
   const goToViewDetail = () => {
     if (selectedTrips.length > 0) {
-      navigate(`/view`)
+      navigate(`/view/${selectedTrips[0]._id}`)
     } else {
       toast.warning("Select Trips")
     }
@@ -48,6 +51,19 @@ function Home() {
 
     setSelectedTrips((prev) => [...prev, data])
   }
+
+
+  const deleteSelectedTrips = ()=>{
+     const ids = selectedTrips.map((data)=>{return data._id}).join(",")
+
+    deleteTripsApi(ids,userInfo.id).then((response)=>{
+      setTrips(response.data)  
+      localStorage.removeItem("selectedTrips")
+
+    })
+ }
+
+
 
   return (
     <div className="w-[100%] h-[652px] flex flex-col justify-start pt-5 items-center   ">
@@ -86,7 +102,7 @@ function Home() {
               <h1 className="text-2xl font-semibold">Your Trips</h1>
             </div>
             <div className="w-[40%] h-full flex justify-end space-x-3 cursor-pointer">
-              <button className="w-[25%] h-[35px] bg-white  text-gray-500 border-2 border-gray-400 rounded-md text-lg">Delete</button>
+              <button className="w-[25%] h-[35px] bg-white  text-gray-500 border-2 border-gray-400 rounded-md text-lg" onClick={deleteSelectedTrips}>Delete</button>
               <button className="w-[25%] h-[35px]   text-white bg-gray-500 border-2 border-gray-400 rounded-md text-lg  cursor-pointer" onClick={goToViewDetail} >Open</button>
             </div>
           </div>

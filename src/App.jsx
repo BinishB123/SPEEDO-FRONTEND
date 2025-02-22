@@ -14,7 +14,7 @@ function App() {
     <Route path='/login' element={<Login></Login>}></Route>
     <Route path='/' element={<HomePage></HomePage>}>
     <Route index element={<Home></Home>}/>
-    <Route path='view' element={<ViewDetail></ViewDetail>}/> 
+    <Route path='view/:id' element={<ViewDetail></ViewDetail>}/> 
     </Route>
    </Routes>
    </BrowserRouter>

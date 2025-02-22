@@ -41,4 +41,12 @@ export const fetchTripDataWithrequiredData = (id)=>{
     })
 }
 
-
+export const deleteTripsApi = (ids,userid)=>{
+    return new Promise((resolve, reject) => {
+        axiosInstance.delete(speedoApi.deleteTrips+`/${ids}/${userid}`).then((response)=>{
+            resolve(response)
+        }).catch((error)=>{
+            reject(error)
+        })
+    })
+}
