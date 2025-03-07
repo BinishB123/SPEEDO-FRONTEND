@@ -6,14 +6,31 @@ import { FaCaretLeft } from "react-icons/fa";
 import { FaCaretRight } from "react-icons/fa";
 import { toast } from "sonner";
 import { useEffect } from "react";
-import { deleteTripsApi } from "../service/user.jsx";
-import { useSelector } from "react-redux";
+import { deleteTripsApi, fetchTrips } from "../service/user.jsx";
+import { useDispatch, useSelector } from "react-redux";
+import { reset } from "../redux/slice/user.jsx";
 
 
 function Home() {
   const {userInfo} = useSelector((state)=>state.user)
   const { trips, setUpload,setTrips, setSelectedTrips, selectedTrips, setTripCaluclations } = useAppContext()
   const navigate = useNavigate()
+  const dispatch = useDispatch()
+  useEffect(()=>{
+    
+    if (userInfo) {
+      fetchTrips(userInfo.id).then((response)=>{
+        setTrips(response.data)
+      }).catch((error)=>{
+        if (error.status===401) {
+          dispatch(reset())
+          navigate('/login',{replace:true})
+        }
+      })
+    }
+   
+  },[userInfo])
+
   useEffect(() => {
     const storedTrips = JSON.parse(localStorage.getItem("selectedTrips"));
     if (storedTrips) {
@@ -26,6 +43,8 @@ function Home() {
 
 
   const goToViewDetail = () => {
+    console.log(selectedTrips);
+    
     if (selectedTrips.length > 0) {
       navigate(`/view/${selectedTrips[0]._id}`)
     } else {

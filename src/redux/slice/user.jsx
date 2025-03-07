@@ -58,7 +58,10 @@ const userSlice =  createSlice({
         })
     }
 })
+console.log(userSlice);
 
+
+console.log(userSlice.reducer);
 
 
 export const { reset, resetSuccessAndMessage, resetErrorAndErrorMessage, urgentreset } = userSlice.actions;

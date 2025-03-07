@@ -43,6 +43,7 @@ function Modal() {
     formData.append("id", userInfo.id)
     uploadFile(formData).then((response)=>{
       setTrips(response.data);
+      setUpload(false)
     })
   }
 

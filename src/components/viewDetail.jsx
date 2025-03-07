@@ -12,125 +12,155 @@ import group1 from '../assets/Group1.png'
 import loc from '../assets/mdi_map-marker-distance.png'
 import Group3 from '../assets/Group3.png'
 import { useEffect, useReducer, useRef, useState } from "react";
-import {  fetchTripDataWithrequiredData } from "../service/user.jsx";
+import { fetchTripDataWithrequiredData } from "../service/user.jsx";
 import { current } from "@reduxjs/toolkit";
 import coordinates from "../api/axios.jsx";
+import { useDispatch } from "react-redux";
+import { reset } from "../redux/slice/user.jsx";
 
 
 function ViewDetail() {
   const navigate = useNavigate();
   const params = useParams()
-   const mapRef = useRef()
-   const mapInstance = useRef(null);
+  const mapRef = useRef()
+  const mapInstance = useRef(null);
+  const dispatch = useDispatch()
   const [selectedTripId, setSelectedTripId] = useState(params.id);
 
-  const { trips ,setTripCaluclations ,tripCalculations={},selectedTrips,setSelectedTrips} = useAppContext();
+  const { trips, setTripCaluclations, tripCalculations = {}, selectedTrips, setSelectedTrips } = useAppContext();
   useEffect(() => {
     if (!selectedTrips.length) {
       navigate(-1)
       return
     }
-   console.log("selectedTrips[0]._id",selectedTrips[0]._id);
-   
-    setSelectedTripId(selectedTrips[0]._id)    
-   
+
+    setSelectedTripId(selectedTrips[0]._id)
+
   }, []);
 
 
   useEffect(() => {
-    console.log("tr",selectedTripId);
-    
     if (selectedTripId) {
       fetchTripDataWithrequiredData(selectedTripId)
         .then((response) => {
-          console.log("tripdata",response.data);
-          
           setTripCaluclations(response.data);
         })
         .catch((error) => {
-          console.error(error);
+          if (error.status === 401) {
+            dispatch(reset())
+            navigate('/login', { replace: true })
+          }
         });
     }
   }, [selectedTripId]);
-  useEffect(() => {
-    if (tripCalculations) {
-     mapInstance.current = L.map(mapRef.current).setView([52.505175214638, 13.33630812096193], 9);
+
+ useEffect(() => {
+  if (tripCalculations) {
+    mapInstance.current = L.map(mapRef.current).setView([52.505175214638, 13.33630812096193], 9);
+
     // Load OpenStreetMap tiles
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
+      maxZoom: 19,   
       attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(mapInstance.current);
 
-    const redIcon = L.icon({
-      iconUrl: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png', // Red marker image
-      iconSize: [32, 32], // Size of the icon
-      iconAnchor: [16, 32], // Anchor point
-      popupAnchor: [0, -32] // Popup position
+    // Define marker icons
+    const startEndIcon = L.icon({
+      iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png', 
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+      popupAnchor: [0, -32]
     });
+
+    const stoppedIcon = L.icon({
+      iconUrl: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png', 
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+      popupAnchor: [0, -32]
+    });
+
     const idleIcon = L.icon({
-      iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png', // Orange marker for idle points
-      iconSize: [32, 32], 
-      iconAnchor: [16, 32], 
-      popupAnchor: [0, -32] 
+      iconUrl: 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png', 
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+      popupAnchor: [0, -32]
     });
-    const startIcon = L.icon({
-      iconUrl: 'https://maps.google.com/mapfiles/ms/icons/black-dot.png', // Orange marker for idle points
-      iconSize: [32, 32], 
-      iconAnchor: [16, 32], 
-      popupAnchor: [0, -32] 
-    });
+
+   
+    const gpsData = tripCalculations?.tripData?.gpsData || [];
+
+   
+    const stopPoints = gpsData.filter((p, i) => 
+      p.ignition === "off" && gpsData[i - 1]?.ignition === "on"
+    );
+
+  
+    const overSpeedingPoints = new Set(tripCalculations?.overSpeedingPoints?.map(p => `${p.latitude},${p.longitude}`) || []);
+    const wayPoints = gpsData
+      .filter(p => !stopPoints.some(stop => stop.latitude === p.latitude && stop.longitude === p.longitude))
+      .map(p => L.latLng(p.latitude, p.longitude));
+
     
-    const wayPoints = tripCalculations?.tripData?.gpsData.map((p)=>L.latLng(p.latitude,p.longitude))
-    const stopPoint = tripCalculations?.tripData?.gpsData.find((p, i) => p.ignition === "off" && tripCalculations?.tripData?.gpsData[i - 1]?.ignition === "on");
-    const idlePoints = tripCalculations?.tripData?.gpsData.filter((p, index, arr) => {
-      if (index === 0) return false; 
-      const prev = arr[index - 1];
-      return p.ignition === 'on' && p.latitude === prev.latitude && p.longitude === prev.longitude;
-    });
-    L.Routing.control({
-      waypoints:wayPoints ,
-      routeWhileDragging: true,
-      createMarker: function(i, waypoint, n) {
-        // Show marker only for first and last points
-        if (i === 0 || i === n - 1) {
-            let marker = L.marker(waypoint.latLng,{icon:startIcon})
-                .bindPopup(i === 0 ? "Start" : "End")
-                .addTo(mapInstance.current); // Explicitly add marker to the map
-            marker.openPopup();
-            return marker;
-        }
-        return null;
+    for (let i = 0; i < wayPoints.length - 1; i++) {
+      const segmentStart = wayPoints[i];
+      const segmentEnd = wayPoints[i + 1];
+
+      const isOverSpeeding = overSpeedingPoints.has(`${segmentStart.lat},${segmentStart.lng}`);
+
+      L.polyline([segmentStart, segmentEnd], {
+        color: isOverSpeeding ? "green" : "red",  
+        weight: 5
+      }).addTo(mapInstance.current);
     }
-    
-    }).addTo(mapInstance.current);
-    if (stopPoint) {
-      L.marker([stopPoint.latitude, stopPoint.longitude], {icon:redIcon })
+
+ 
+    if (wayPoints.length > 0) {
+      L.marker(wayPoints[0], { icon: startEndIcon })
+        .addTo(mapInstance.current)
+        .bindPopup("Start")
+        .openPopup();
+
+      L.marker(wayPoints[wayPoints.length - 1], { icon: startEndIcon })
+        .addTo(mapInstance.current)
+        .bindPopup("End")
+        .openPopup();
+    }
+
+    stopPoints.forEach(stopPoint => {
+      L.marker([stopPoint.latitude, stopPoint.longitude], { icon: stoppedIcon })
         .addTo(mapInstance.current)
         .bindPopup("Stopped Here")
         .openPopup();
-    }
-    console.log(idlePoints);
-    
-    // idlePoints.forEach(idlePoint => {
-    //   L.marker([idlePoint.latitude, idlePoint.longitude], { icon: idleIcon })
-    //     .addTo(mapInstance.current)
-    //     .bindPopup("Idle Here")
-    //     .openPopup();
-    // });
-    }
-    
-    
+    });
 
-    return () => mapInstance.current.remove(); // Cleanup on unmount
-  }, [tripCalculations]);
-  
-  
+   
+    const idlePoints = gpsData.filter((p, index, arr) => {
+      if (index === 0) return false;
+      const prev = arr[index - 1];
+      return p.ignition === 'on' && p.latitude === prev.latitude && p.longitude === prev.longitude;
+    });
 
+    idlePoints.forEach(idlePoint => {
+      L.marker([idlePoint.latitude, idlePoint.longitude], { icon: idleIcon })
+        .addTo(mapInstance.current)
+        .bindPopup("Idle Here")
+        .openPopup();
+    });
 
-
- 
+    return () => mapInstance.current.remove(); 
+  }
+}, [tripCalculations]);
 
   
+  
+
+
+
+
+
+
+
+
   return (
     <>
       <div className="w-[100%] h-auto  flex flex-col mt-5 space-y-2 justify-start items-center">
@@ -158,7 +188,7 @@ function ViewDetail() {
             <h1 className="text-sm font-semibold">Stopped</h1>
           </div>
           <div className="w-[15%] h-[20px] flex space-x-1 ">
-            <div className="w-[10%] h-full rounded-full bg-rose-600"></div>
+            <div className="w-[10%] h-full rounded-full bg-orange-600"></div>
             <h1 className="text-sm font-semibold">Idle</h1>
           </div>
           <div className="w-[15%] h-[20px] flex space-x-1 ">
@@ -166,7 +196,7 @@ function ViewDetail() {
             <h1 className="text-sm font-semibold">Over speeding</h1>
           </div>
         </div>
-        <div className="w-[80%] h-[450px] bg-red-500 overflow-hidden"  ref={mapRef}>
+        <div className="w-[80%] h-[450px] bg-red-500 overflow-hidden" ref={mapRef}>
           {/* <MapContainer
             center={[51.505, -0.09]}
             zoom={13}
@@ -186,11 +216,10 @@ function ViewDetail() {
           <div className="w-[50%] flex h-full space-x-4 items-end cursor-pointer" >
             {selectedTrips.map((data, index) => (
               <h1
-                className={`text-sm    font-medium mb-0 ${
-                  data._id === selectedTripId
+                className={`text-sm    font-medium mb-0 ${data._id === selectedTripId
                     ? "border-b-2 border-blue-600 text-blue-500"
                     : " text-gray-400 "
-                }`}  onClick={() => setSelectedTripId(data._id)}
+                  }`} onClick={() => setSelectedTripId(data._id)}
 
               >
                 {data.tripName
@@ -210,9 +239,9 @@ function ViewDetail() {
               <img src={vector} alt="" className="pl-6 pt-3" />
             </div>
             <div className="w-[100%] h-[70px] ">
-              <h1 className="text-2xl font-semibold text-center">{(tripCalculations.distance/1000).toFixed(2) }Km</h1>
+              <h1 className="text-2xl font-semibold text-center">{(tripCalculations.distance / 1000).toFixed(2)}Km</h1>
               <h1 className="text-lg text-center">
-                Total Distanced Travelled 
+                Total Distanced Travelled
               </h1>
             </div>
           </div>
@@ -223,7 +252,7 @@ function ViewDetail() {
             <div className="w-[100%] h-[70px] ">
               <h1 className="text-2xl font-semibold text-center">{tripCalculations.travelDuration}</h1>
               <h1 className="text-lg text-center">
-              Total Travelled Duration               
+                Total Travelled Duration
               </h1>
             </div>
           </div>
@@ -234,7 +263,7 @@ function ViewDetail() {
             <div className="w-[100%] h-[70px] ">
               <h1 className="text-2xl font-semibold text-center">{tripCalculations.overSpeedDuration}</h1>
               <h1 className="text-lg text-center">
-              Over Speeding Duration 
+                Over Speeding Duration
               </h1>
             </div>
           </div>
@@ -243,9 +272,9 @@ function ViewDetail() {
               <img src={loc} alt="" className="pl-6 pt-3" />
             </div>
             <div className="w-[100%] h-[70px] ">
-              <h1 className="text-2xl font-semibold text-center">{(tripCalculations.overSpeedingDistance/1000).toFixed(2)}KM</h1>
+              <h1 className="text-2xl font-semibold text-center">{(tripCalculations.overSpeedingDistance / 1000).toFixed(2)}KM</h1>
               <h1 className="text-lg text-center">
-              Over Speeding Distance 
+                Over Speeding Distance
               </h1>
             </div>
           </div>
@@ -256,8 +285,8 @@ function ViewDetail() {
             <div className="w-[100%] h-[70px] ">
               <h1 className="text-2xl font-semibold text-center">{tripCalculations.stoppedDuration}</h1>
               <h1 className="text-lg text-center">
-              Stopped Duration              
-               </h1>
+                Stopped Duration
+              </h1>
             </div>
           </div>
         </div>

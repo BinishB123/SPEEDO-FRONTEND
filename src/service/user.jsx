@@ -23,9 +23,12 @@ export const uploadFile = (formData) => {
 export const fetchTrips = (id)=>{
     return new Promise((resolve, reject) => {
         axiosInstance.get(speedoApi.fetchTrips+`/${id}`).then((response)=>{
+            
             resolve(response)
         }).catch((error)=>{
-            reject(error)
+            console.log(error);
+            
+            reject(error.response)
         })
     })
 }
@@ -34,9 +37,11 @@ export const fetchTrips = (id)=>{
 export const fetchTripDataWithrequiredData = (id)=>{
     return new Promise((resolve,reject)=>{
         axiosInstance.get(speedoApi.fetchTripDataWithrequiredData+`/${id}`).then((response)=>{
+            console.log(response);
+            
             resolve(response)
         }).catch((error)=>{
-            reject(error)
+            reject(error.response)
         })
     })
 }
